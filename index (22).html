@@ -1,0 +1,2295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Slab Scan — Graded Card Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css" />
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-lt: #F7EDD0;
+    --gold-dk: #8B6914;
+    --ink: #0f0f0f;
+    --ink2: #2a2a2a;
+    --ink3: #555;
+    --muted: #888;
+    --border: #e0ddd6;
+    --border2: #ccc;
+    --surface: #faf9f7;
+    --card: #ffffff;
+    --success: #1a7f47;
+    --success-bg: #eafaf1;
+    --danger: #c0392b;
+    --danger-bg: #fdf0ef;
+    --accent: #1a56a4;
+    --accent-bg: #eff6ff;
+    --radius: 8px;
+    --radius-lg: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--surface);
+    color: var(--ink2);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* ── Sidebar layout ── */
+  .layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    background: var(--ink);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+
+  .brand {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid #222;
+  }
+  .brand-mark {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+  }
+  .brand-icon {
+    width: 36px; height: 36px; background: var(--gold);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  }
+  .brand-icon span { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--ink); }
+  .brand-name { font-family: 'DM Serif Display', serif; font-size: 20px; color: #fff; letter-spacing: -0.3px; }
+  .brand-sub { font-size: 11px; color: #666; margin-top: 2px; }
+
+  .nav { flex: 1; padding: 16px 10px; display: flex; flex-direction: column; gap: 3px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--radius);
+    font-size: 13.5px; color: #aaa; cursor: pointer;
+    transition: all 0.15s; border: none; background: none;
+    width: 100%; text-align: left; font-family: 'Inter', sans-serif;
+  }
+  .nav-item i { font-size: 17px; }
+  .nav-item:hover { background: #1c1c1c; color: #fff; }
+  .nav-item.active { background: #1e1e1e; color: var(--gold); font-weight: 500; }
+  .nav-item .badge {
+    margin-left: auto; background: var(--gold); color: var(--ink);
+    font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 20px;
+  }
+
+  .sidebar-footer {
+    padding: 16px 14px;
+    border-top: 1px solid #1c1c1c;
+    font-size: 11px; color: #444; line-height: 1.6;
+  }
+  .sidebar-footer span { color: var(--gold); }
+
+  /* ── Main content ── */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .topbar-actions { display: flex; gap: 8px; }
+  .topbar-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; font-size: 12.5px;
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    background: var(--card); color: var(--ink3); cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .topbar-btn:hover { background: var(--surface); border-color: #bbb; }
+  .topbar-btn.primary { background: var(--ink); color: var(--gold); border-color: var(--ink); }
+  .topbar-btn.primary:hover { background: var(--ink2); }
+
+  /* ── Page panels ── */
+  .panel { display: none; padding: 28px; max-width: 860px; }
+  .panel.active { display: block; }
+
+  /* ── Section headings ── */
+  .section-head {
+    margin-bottom: 20px;
+  }
+  .section-head h2 { font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .section-head p { font-size: 13px; color: var(--muted); }
+
+  /* ── Cards / surfaces ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+  }
+  .card + .card { margin-top: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+  .card-title i { font-size: 16px; color: var(--gold-dk); }
+
+  /* ── Form grid ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group.span2 { grid-column: span 2; }
+  .form-group.span3 { grid-column: span 3; }
+  label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  input[type="text"], input[type="number"], select, textarea {
+    padding: 9px 12px; font-size: 13.5px;
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    background: #fff; color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+  }
+  textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+
+  /* ── Scan slots ── */
+  .scan-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .scan-slot {
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 14px; background: var(--surface);
+  }
+  .slot-label {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .slot-check {
+    display: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--success); align-items: center; justify-content: center; margin-left: auto;
+  }
+  .slot-check i { font-size: 10px; color: #fff; }
+  .slot-img-wrap {
+    aspect-ratio: 2.5/3.5; border-radius: 8px; overflow: hidden;
+    background: #fff; border: 1px dashed var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .slot-img-wrap:hover { border-color: var(--gold); }
+  .slot-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .slot-ph { text-align: center; color: var(--muted); pointer-events: none; }
+  .slot-ph i { font-size: 28px; display: block; margin-bottom: 5px; }
+  .slot-ph span { font-size: 11px; }
+  .slot-btn {
+    margin-top: 10px; width: 100%; padding: 7px; font-size: 12px;
+    background: #fff; border: 1px solid var(--border2);
+    border-radius: var(--radius); cursor: pointer; color: var(--ink3);
+    font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; gap: 5px;
+    transition: all 0.15s;
+  }
+  .slot-btn:hover { background: var(--surface); border-color: #bbb; }
+  input[type="file"].hidden { display: none; }
+
+  /* ── Info banner ── */
+  .info-banner {
+    background: var(--accent-bg); border: 1px solid #bfdbfe;
+    border-radius: var(--radius); padding: 10px 14px;
+    font-size: 12.5px; color: var(--accent);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  }
+  .info-banner i { font-size: 16px; flex-shrink: 0; }
+
+  /* ── Primary action button ── */
+  .btn-primary {
+    width: 100%; padding: 13px; background: var(--ink); color: var(--gold);
+    border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: opacity 0.15s; letter-spacing: 0.1px;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ── Progress box ── */
+  .proc-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 20px; margin-top: 14px;
+    display: none;
+  }
+  .proc-box.visible { display: block; }
+  .proc-title { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+  .proc-status { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .prog-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 16px; }
+  .prog-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.35s ease; }
+  .proc-steps { display: flex; flex-direction: column; gap: 7px; }
+  .p-step { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .p-step.done { color: var(--success); }
+  .p-step.act { color: var(--ink); font-weight: 500; }
+  .p-step i { font-size: 15px; }
+
+  /* ── Stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px 16px;
+  }
+  .stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .stat-val { font-size: 24px; font-weight: 600; color: var(--ink); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Filter pills ── */
+  .filter-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .fpill {
+    padding: 5px 12px; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 100px;
+    background: var(--card); color: var(--ink3); cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all 0.12s;
+  }
+  .fpill:hover { border-color: var(--border2); background: var(--surface); }
+  .fpill.active { background: var(--ink); color: var(--gold); border-color: var(--ink); }
+
+  /* ── Gallery grid ── */
+  .gallery-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .gallery-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .gallery-count { font-size: 12px; color: var(--muted); }
+
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 12px; }
+  .card-thumb {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .card-thumb:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.07); }
+  .ct-img { aspect-ratio: 2.5/3.5; overflow: hidden; }
+  .ct-img img { width: 100%; height: 100%; object-fit: cover; }
+  .ct-info { padding: 8px 10px 10px; }
+  .ct-name { font-size: 11.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ct-meta { margin-top: 3px; display: flex; align-items: center; justify-content: space-between; }
+  .gbadge {
+    display: inline-flex; align-items: center; gap: 2px;
+    font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+  }
+  .gpsa { background: #dbeafe; color: #1d4ed8; }
+  .gsgc { background: #fef3c7; color: #92400e; }
+  .gval-delta { font-size: 10px; font-weight: 600; }
+  .gain { color: var(--success); }
+  .loss { color: var(--danger); }
+
+  .empty-state {
+    text-align: center; padding: 48px 20px; color: var(--muted);
+    background: var(--card); border: 1px dashed var(--border2);
+    border-radius: var(--radius-lg);
+  }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 12px; opacity: 0.3; }
+  .empty-state h3 { font-size: 15px; font-weight: 600; color: var(--ink3); margin-bottom: 5px; }
+  .empty-state p { font-size: 13px; margin-bottom: 16px; }
+  .empty-state button {
+    padding: 9px 18px; background: var(--ink); color: var(--gold);
+    border: none; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+
+  /* ── Card detail ── */
+  .detail-panel {
+    display: none; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 22px; margin-top: 16px;
+  }
+  .detail-panel.open { display: block; }
+  .detail-back {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12.5px; color: var(--accent); cursor: pointer;
+    background: none; border: none; font-family: 'Inter', sans-serif;
+    margin-bottom: 16px; padding: 0;
+  }
+  .detail-img img { width: 100%; border-radius: 10px; border: 1px solid var(--border); display: block; }
+  .detail-chips { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 14px; }
+  .chip {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .chip-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+  .chip-val { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+
+  .det-section { margin-top: 16px; }
+  .det-section label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+
+  .value-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .val-result {
+    border-radius: var(--radius); padding: 12px 14px;
+    display: flex; flex-direction: column;
+  }
+  .val-result.gain-box { background: var(--success-bg); }
+  .val-result.loss-box { background: var(--danger-bg); }
+  .val-result.neutral-box { background: var(--surface); }
+  .val-result-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+  .gain-box .val-result-label { color: var(--success); }
+  .loss-box .val-result-label { color: var(--danger); }
+  .neutral-box .val-result-label { color: var(--muted); }
+  .val-result-num { font-size: 20px; font-weight: 600; }
+  .gain-box .val-result-num { color: var(--success); }
+  .loss-box .val-result-num { color: var(--danger); }
+  .neutral-box .val-result-num { color: var(--ink3); }
+
+  .detail-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .act-btn {
+    flex: 1; padding: 9px 10px; font-size: 12.5px;
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    background: var(--card); cursor: pointer; color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .act-btn:hover { background: var(--surface); }
+  .act-btn.gold { background: var(--ink); color: var(--gold); border-color: var(--ink); }
+  .act-btn.gold:hover { opacity: 0.85; }
+  .save-bar { margin-top: 10px; }
+  .save-btn {
+    width: 100%; padding: 9px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    background: var(--surface); cursor: pointer; color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .save-btn:hover { background: #eee; }
+
+  /* ── Instagram tab ── */
+  .ig-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+  .ig-phone-wrap { background: #1a1a1a; border-radius: var(--radius-lg); padding: 16px; }
+  .ig-phone { background: #fff; border-radius: 16px; overflow: hidden; max-width: 228px; margin: 0 auto; }
+  .ig-ph { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 0.5px solid #eee; }
+  .ig-av { width: 26px; height: 26px; border-radius: 50%; background: conic-gradient(#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
+  .ig-un { font-size: 10px; font-weight: 700; color: #000; font-family: -apple-system, sans-serif; }
+  .ig-post-img { aspect-ratio: 1; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .ig-post-img img { width: 100%; height: 100%; object-fit: cover; }
+  .ig-post-img-ph { text-align: center; color: #555; }
+  .ig-post-img-ph i { font-size: 26px; display: block; margin-bottom: 4px; }
+  .ig-post-img-ph p { font-size: 9px; }
+  .ig-post-ft { padding: 8px 10px 10px; }
+  .ig-hearts { font-size: 17px; margin-bottom: 3px; }
+  .ig-caption-preview { font-size: 9.5px; color: #000; line-height: 1.45; font-family: -apple-system, sans-serif; }
+  .ig-caption-preview strong { font-weight: 700; }
+  .ig-size-badge {
+    margin-top: 10px; text-align: center;
+    font-size: 10px; color: var(--gold); letter-spacing: 0.5px; font-weight: 600;
+  }
+
+  .ig-tools { display: flex; flex-direction: column; gap: 16px; }
+  .tool-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+
+  .style-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .style-opt {
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 8px; text-align: center; cursor: pointer;
+    background: var(--card); transition: all 0.12s;
+  }
+  .style-opt.active { border-color: var(--gold); background: var(--gold-lt); }
+  .style-prev {
+    height: 40px; border-radius: 5px; margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
+  }
+  .style-opt span { font-size: 10.5px; color: var(--ink3); }
+  .htag-box {
+    background: var(--accent-bg); border-radius: var(--radius);
+    padding: 10px 12px; font-size: 12px; color: var(--accent); line-height: 1.8;
+  }
+  .gen-btn {
+    width: 100%; padding: 9px; background: var(--surface);
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    font-size: 13px; cursor: pointer; color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .gen-btn:hover { background: #ebebeb; }
+  .ig-export-btn {
+    width: 100%; padding: 12px; background: var(--ink); color: var(--gold);
+    border: none; border-radius: var(--radius); font-size: 13.5px; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: opacity 0.15s;
+  }
+  .ig-export-btn:hover { opacity: 0.85; }
+
+  .no-card-msg {
+    background: var(--card); border: 1px dashed var(--border2);
+    border-radius: var(--radius-lg); padding: 40px;
+    text-align: center; color: var(--muted);
+  }
+  .no-card-msg i { font-size: 36px; display: block; margin-bottom: 10px; opacity: 0.3; }
+  .no-card-msg p { font-size: 13px; margin-bottom: 12px; }
+  .no-card-msg button {
+    padding: 8px 16px; background: var(--ink); color: var(--gold);
+    border: none; border-radius: var(--radius); font-size: 12.5px; font-weight: 500;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+
+  /* ── AI scan banner ── */
+  .ai-banner {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: var(--radius); padding: 11px 14px;
+    display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px;
+  }
+  .ai-banner i { font-size: 17px; color: #16a34a; flex-shrink: 0; margin-top: 1px; }
+  .ai-banner-text { font-size: 12.5px; color: #15803d; line-height: 1.5; }
+  .ai-banner-text strong { font-weight: 600; }
+
+  .ai-reading {
+    display: none; align-items: center; gap: 10px;
+    background: #fefce8; border: 1px solid #fde68a;
+    border-radius: var(--radius); padding: 10px 14px;
+    font-size: 12.5px; color: #92400e; margin-top: 10px;
+  }
+  .ai-reading.visible { display: flex; }
+  .ai-reading i { font-size: 16px; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .ai-filled {
+    display: none; align-items: center; gap: 8px;
+    background: #f0fdf4; border: 1px solid #86efac;
+    border-radius: var(--radius); padding: 10px 14px;
+    font-size: 12.5px; color: #15803d; margin-top: 10px;
+  }
+  .ai-filled.visible { display: flex; }
+
+  .api-key-row {
+    display: flex; gap: 8px; align-items: flex-end; margin-bottom: 16px;
+  }
+  .api-key-row .form-group { flex: 1; margin: 0; }
+  .api-key-btn {
+    padding: 9px 14px; font-size: 12.5px; white-space: nowrap;
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    background: var(--card); color: var(--ink3); cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all 0.15s; height: 38px;
+  }
+  .api-key-btn:hover { background: var(--surface); }
+  .api-key-btn.saved { background: #f0fdf4; border-color: #86efac; color: #15803d; }
+
+  /* ── Bulk upload modal ── */
+  .bulk-modal {
+    display: none; position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+  }
+  .bulk-modal.open { display: flex; }
+  .bulk-inner {
+    background: var(--card); border-radius: var(--radius-lg);
+    padding: 28px; width: 90%; max-width: 620px; max-height: 90vh;
+    overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
+  }
+  .bulk-title { font-size: 17px; font-weight: 600; color: var(--ink); }
+  .bulk-drop {
+    border: 2px dashed var(--border2); border-radius: var(--radius-lg);
+    padding: 32px; text-align: center; cursor: pointer;
+    transition: all 0.15s; background: var(--surface);
+  }
+  .bulk-drop:hover, .bulk-drop.drag-over { border-color: var(--gold); background: var(--gold-lt); }
+  .bulk-drop i { font-size: 36px; color: var(--muted); display: block; margin-bottom: 10px; }
+  .bulk-drop p { font-size: 13px; color: var(--ink3); margin-bottom: 4px; }
+  .bulk-drop small { font-size: 11px; color: var(--muted); }
+  .bulk-pairs { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+  .bulk-pair {
+    display: grid; grid-template-columns: 1fr 1fr auto;
+    gap: 8px; align-items: center;
+    background: var(--surface); border-radius: var(--radius); padding: 8px 10px;
+    border: 1px solid var(--border);
+  }
+  .bulk-pair-img { height: 52px; border-radius: 4px; overflow: hidden; background: #111; }
+  .bulk-pair-img img { width: 100%; height: 100%; object-fit: cover; }
+  .bulk-pair-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  .bulk-pair-name { font-size: 12px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bulk-pair-status { font-size: 10px; padding: 2px 7px; border-radius: 100px; font-weight: 600; white-space: nowrap; }
+  .bulk-pair-status.pending  { background: #fef9c3; color: #854d0e; }
+  .bulk-pair-status.reading  { background: #eff6ff; color: #1d4ed8; }
+  .bulk-pair-status.done     { background: #f0fdf4; color: #15803d; }
+  .bulk-pair-status.error    { background: #fdf0ef; color: #c0392b; }
+  .bulk-progress { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .bulk-progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.4s; }
+  .bulk-status-text { font-size: 12px; color: var(--muted); text-align: center; }
+  .bulk-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .bulk-cancel { padding: 9px 18px; font-size: 13px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); cursor: pointer; font-family: 'Inter', sans-serif; color: var(--ink3); }
+  .bulk-start  { padding: 9px 20px; font-size: 13px; font-weight: 600; border: none; border-radius: var(--radius); background: var(--ink); color: var(--gold); cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 6px; }
+  .bulk-start:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(12px);
+    background: var(--ink); color: var(--gold);
+    padding: 10px 20px; border-radius: 100px; font-size: 13px; font-weight: 500;
+    opacity: 0; transition: all 0.22s; pointer-events: none; z-index: 9999;
+    white-space: nowrap; letter-spacing: 0.1px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Responsive ── */
+  @media (max-width: 760px) {
+    .sidebar { width: 60px; }
+    .brand-name, .brand-sub, .nav-item span, .sidebar-footer { display: none; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .nav-item i { font-size: 20px; }
+    .main { margin-left: 60px; }
+    .panel { padding: 16px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .form-grid, .form-grid.cols3 { grid-template-columns: 1fr; }
+    .form-group.span2, .form-group.span3 { grid-column: span 1; }
+    .scan-slots { grid-template-columns: 1fr; }
+    .ig-layout { grid-template-columns: 1fr; }
+    .detail-chips { grid-template-columns: 1fr 1fr; }
+    .value-strip { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <div class="brand-icon"><span>SS</span></div>
+        <div class="brand-name">Slab Scan</div>
+      </div>
+      <div class="brand-sub">Epson V600 · PSA &amp; SGC</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="sw('scan')" id="nav-scan">
+        <i class="ti ti-scan"></i><span>Scan card</span>
+      </button>
+      <button class="nav-item" onclick="sw('gallery')" id="nav-gallery">
+        <i class="ti ti-layout-grid"></i><span>Collection</span>
+        <span class="badge" id="nav-badge" style="display:none">0</span>
+      </button>
+      <button class="nav-item" onclick="sw('instagram')" id="nav-instagram">
+        <i class="ti ti-brand-instagram"></i><span>Share to IG</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <span>Slab Scan</span><br/>
+      1080×1080 Instagram<br/>
+      PSA · SGC · Auto-crop
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Scan a card</div>
+      <div class="topbar-actions">
+        <button class="topbar-btn" onclick="exportCSV()">
+          <i class="ti ti-table-export"></i> Export CSV
+        </button>
+        <button class="topbar-btn" onclick="openBulkUpload()">
+          <i class="ti ti-folder-up"></i> Bulk upload
+        </button>
+        <button class="topbar-btn primary" onclick="sw('scan')">
+          <i class="ti ti-plus"></i> New scan
+        </button>
+      </div>
+    </div>
+
+    <!-- ── SCAN panel ── -->
+    <div class="panel active" id="panel-scan">
+      <div class="section-head">
+        <h2>Scan a graded card</h2>
+        <p>Upload front and back scans from your Epson V600. AI reads the slab label and fills in all card details automatically.</p>
+      </div>
+
+      <!-- API Key setup -->
+      <div class="card" id="api-key-card">
+        <div class="card-title"><i class="ti ti-robot"></i> Claude AI — slab reader</div>
+        <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+          Slab Scan uses Claude's vision AI to read your graded slab and auto-fill every field the moment you upload the front scan. Paste your Anthropic API key below — it's stored only in this browser tab and never sent anywhere except Anthropic's API.
+        </p>
+        <div class="api-key-row">
+          <div class="form-group">
+            <label>Anthropic API key</label>
+            <input type="password" id="api-key-input" placeholder="sk-ant-api03-…" autocomplete="off" />
+          </div>
+          <button class="api-key-btn" id="api-key-save-btn" onclick="saveApiKey()">Save key</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted)">
+          Don't have a key? Get one free at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>. Usage is pay-per-scan (roughly $0.01–0.02 per card read).
+        </p>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><i class="ti ti-info-circle"></i> Card details
+          <span id="ai-autofill-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:600;background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:2px 8px;border-radius:100px">
+            <i class="ti ti-sparkles" style="font-size:11px;vertical-align:-1px"></i> AI filled
+          </span>
+        </div>
+        <div class="ai-reading" id="ai-reading">
+          <i class="ti ti-loader-2"></i>
+          Reading slab label with Claude vision…
+        </div>
+        <div class="ai-filled" id="ai-filled">
+          <i class="ti ti-sparkles"></i>
+          Fields filled from slab — review and adjust if needed.
+        </div>
+        <div class="form-grid cols3" style="margin-top:4px">
+          <div class="form-group">
+            <label>Year</label>
+            <input type="text" id="cy" placeholder="e.g. 2011" />
+          </div>
+          <div class="form-group span2">
+            <label>Set</label>
+            <input type="text" id="cs" placeholder="e.g. Topps Update Series" />
+          </div>
+          <div class="form-group">
+            <label>Card number</label>
+            <input type="text" id="cnum" placeholder="e.g. US175" />
+          </div>
+          <div class="form-group span2">
+            <label>Player / card name</label>
+            <input type="text" id="cn" placeholder="e.g. Mike Trout RC" />
+          </div>
+          <div class="form-group">
+            <label>Grader</label>
+            <select id="cg"><option value="PSA">PSA</option><option value="SGC">SGC</option><option value="CGC">CGC</option></select>
+          </div>
+          <div class="form-group">
+            <label>Grade</label>
+            <select id="cgr">
+              <option>10</option><option>9.5</option><option>9</option><option>8.5</option>
+              <option>8</option><option>7</option><option>6</option><option>5</option>
+              <option>4</option><option>3</option><option>2</option><option>1</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Sport</label>
+            <select id="csp">
+              <option>Baseball</option><option>Basketball</option><option>Football</option>
+              <option>Hockey</option><option>Soccer</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cost paid ($)</label>
+            <input type="number" id="ccost" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label>Current value ($)</label>
+            <input type="number" id="cval" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group span3">
+            <label>Condition notes</label>
+            <textarea id="cnotes" placeholder="Centering, corners, edges, surface observations..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><i class="ti ti-photo-scan"></i> Upload scans</div>
+
+        <div class="info-banner">
+          <i class="ti ti-info-circle"></i>
+          Combined output is 1080×1080 px — the correct size for an Instagram square post. Cards are auto-cropped, perspective-corrected, and stitched side by side.
+        </div>
+
+        <div class="scan-slots">
+          <div class="scan-slot">
+            <div class="slot-label">
+              <i class="ti ti-credit-card"></i> Front scan
+              <span class="slot-check" id="fc"><i class="ti ti-check"></i></span>
+            </div>
+            <div class="slot-img-wrap" id="fw" onclick="document.getElementById('fi').click()">
+              <div class="slot-ph">
+                <i class="ti ti-photo-up"></i>
+                <span>Click to upload front</span>
+              </div>
+            </div>
+            <button class="slot-btn" onclick="document.getElementById('fi').click()">
+              <i class="ti ti-upload"></i> Choose front scan
+            </button>
+            <input type="file" id="fi" class="hidden" accept="image/*,.tif,.tiff" onchange="loadSlot('front',this)" />
+          </div>
+          <div class="scan-slot">
+            <div class="slot-label">
+              <i class="ti ti-credit-card-off"></i> Back scan
+              <span class="slot-check" id="bc"><i class="ti ti-check"></i></span>
+            </div>
+            <div class="slot-img-wrap" id="bw" onclick="document.getElementById('bi').click()">
+              <div class="slot-ph">
+                <i class="ti ti-photo-up"></i>
+                <span>Click to upload back</span>
+              </div>
+            </div>
+            <button class="slot-btn" onclick="document.getElementById('bi').click()">
+              <i class="ti ti-upload"></i> Choose back scan
+            </button>
+            <input type="file" id="bi" class="hidden" accept="image/*,.tif,.tiff" onchange="loadSlot('back',this)" />
+          </div>
+        </div>
+
+        <button class="btn-primary" id="proc-btn" onclick="processCard()" disabled>
+          <i class="ti ti-wand"></i> Auto-crop, combine &amp; add to collection
+        </button>
+
+        <div class="proc-box" id="proc-box">
+          <div class="proc-title">Processing your card…</div>
+          <div class="proc-status" id="ps">Starting</div>
+          <div class="prog-track"><div class="prog-fill" id="pb" style="width:0%"></div></div>
+          <div class="proc-steps">
+            <div class="p-step" id="s1"><i class="ti ti-circle-dashed"></i> Detecting card edges</div>
+            <div class="p-step" id="s2"><i class="ti ti-circle-dashed"></i> Auto-cropping front and back</div>
+            <div class="p-step" id="s3"><i class="ti ti-circle-dashed"></i> Correcting perspective</div>
+            <div class="p-step" id="s4"><i class="ti ti-circle-dashed"></i> Compositing 1080×1080 canvas</div>
+            <div class="p-step" id="s5"><i class="ti ti-circle-dashed"></i> Saving to collection</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GALLERY panel ── -->
+    <div class="panel" id="panel-gallery">
+      <div class="section-head">
+        <h2>Your collection</h2>
+        <p>All scanned cards with value tracking and condition notes.</p>
+      </div>
+
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total cards</div>
+          <div class="stat-val" id="st-count">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total cost</div>
+          <div class="stat-val" id="st-cost">$0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Portfolio value</div>
+          <div class="stat-val" id="st-val">$0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Gain / loss</div>
+          <div class="stat-val" id="st-gl" style="color:var(--success)">$0</div>
+          <div class="stat-sub" id="st-gl-pct"></div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="fpill active" onclick="filt('all',this)">All</button>
+        <button class="fpill" onclick="filt('PSA',this)">PSA</button>
+        <button class="fpill" onclick="filt('SGC',this)">SGC</button>
+        <button class="fpill" onclick="filt('CGC',this)">CGC</button>
+        <button class="fpill" onclick="filt('10',this)">Grade 10</button>
+        <button class="fpill" onclick="filt('9+',this)">Grade 9+</button>
+        <button class="fpill" onclick="filt('Baseball',this)">Baseball</button>
+        <button class="fpill" onclick="filt('Basketball',this)">Basketball</button>
+        <button class="fpill" onclick="filt('Football',this)">Football</button>
+        <button class="fpill" onclick="filt('Hockey',this)">Hockey</button>
+      </div>
+
+      <div class="gallery-header">
+        <div class="gallery-title" id="gal-title">All cards</div>
+        <div class="gallery-count" id="gcnt">0 cards</div>
+      </div>
+
+      <div id="eg" class="empty-state">
+        <i class="ti ti-cards"></i>
+        <h3>No cards yet</h3>
+        <p>Scan your first graded card to build your collection.</p>
+        <button onclick="sw('scan')">Scan first card</button>
+      </div>
+
+      <div class="gallery-grid" id="gg"></div>
+
+      <!-- Card detail -->
+      <div class="detail-panel" id="cd">
+        <button class="detail-back" onclick="closeDet()">
+          <i class="ti ti-arrow-left"></i> Back to collection
+        </button>
+        <div class="detail-img" id="di"></div>
+
+        <div class="det-section">
+          <label style="margin-bottom:8px;display:block">Card details</label>
+          <div class="form-grid cols3">
+            <div class="form-group">
+              <label>Year</label>
+              <input type="text" id="det-year" placeholder="e.g. 2011" />
+            </div>
+            <div class="form-group span2">
+              <label>Set</label>
+              <input type="text" id="det-set" placeholder="e.g. Topps Update Series" />
+            </div>
+            <div class="form-group">
+              <label>Card number</label>
+              <input type="text" id="det-cardnum" placeholder="e.g. US175" />
+            </div>
+            <div class="form-group span2">
+              <label>Player / card name</label>
+              <input type="text" id="det-name" placeholder="e.g. Mike Trout RC" />
+            </div>
+            <div class="form-group">
+              <label>Grader</label>
+              <select id="det-grader">
+                <option value="PSA">PSA</option>
+                <option value="SGC">SGC</option>
+                <option value="CGC">CGC</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Grade</label>
+              <select id="det-grade">
+                <option>10</option><option>9.5</option><option>9</option><option>8.5</option>
+                <option>8</option><option>7</option><option>6</option><option>5</option>
+                <option>4</option><option>3</option><option>2</option><option>1</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Sport</label>
+              <select id="det-sport">
+                <option>Baseball</option><option>Basketball</option><option>Football</option>
+                <option>Hockey</option><option>Soccer</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="det-section">
+          <label>Condition notes</label>
+          <textarea id="det-notes" placeholder="Centering, corners, edges, surface..."></textarea>
+        </div>
+
+        <div class="det-section">
+          <label style="margin-bottom:8px;display:block">Value tracking</label>
+          <div class="value-strip">
+            <div class="form-group">
+              <label>Cost paid ($)</label>
+              <input type="number" id="det-cost" placeholder="0.00" min="0" step="0.01" oninput="updateGain()" />
+            </div>
+            <div class="form-group">
+              <label>Current value ($)</label>
+              <input type="number" id="det-val" placeholder="0.00" min="0" step="0.01" oninput="updateGain()" />
+            </div>
+            <div class="val-result neutral-box" id="gl-box">
+              <div class="val-result-label">Gain / loss</div>
+              <div class="val-result-num" id="gl-num">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <button class="save-btn" onclick="saveDetEdits()">
+            <i class="ti ti-device-floppy"></i> Save changes
+          </button>
+        </div>
+
+        <div class="detail-actions">
+          <button class="act-btn" onclick="dlCard()"><i class="ti ti-download"></i> Download</button>
+          <button class="act-btn" onclick="copyCap()"><i class="ti ti-copy"></i> Copy caption</button>
+          <button class="act-btn gold" onclick="sw('instagram')"><i class="ti ti-brand-instagram"></i> Share to IG</button>
+          <button class="act-btn" onclick="deleteCard()" style="color:var(--danger);border-color:var(--danger)"><i class="ti ti-trash"></i> Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── INSTAGRAM panel ── -->
+    <div class="panel" id="panel-instagram">
+      <div class="section-head">
+        <h2>Share to Instagram</h2>
+        <p>Preview your post, generate a caption, and download a ready-to-upload 1080×1080 image.</p>
+      </div>
+
+      <div id="ig-no-card" class="no-card-msg" style="display:none">
+        <i class="ti ti-cards"></i>
+        <p>Add a card to your collection first, then come back to share it.</p>
+        <button onclick="sw('scan')">Scan a card</button>
+      </div>
+
+      <div id="ig-main">
+        <div class="ig-layout">
+          <!-- Phone preview -->
+          <div>
+            <div class="ig-phone-wrap">
+              <div class="ig-phone">
+                <div class="ig-ph">
+                  <div class="ig-av"></div>
+                  <div class="ig-un" id="ig-un">your_card_vault</div>
+                </div>
+                <div class="ig-post-img" id="ig-img">
+                  <div class="ig-post-img-ph">
+                    <i class="ti ti-photo"></i><p>No card selected</p>
+                  </div>
+                </div>
+                <div class="ig-post-ft">
+                  <div class="ig-hearts">♥</div>
+                  <div class="ig-caption-preview" id="ig-cap">
+                    <strong id="ig-un2">your_card_vault</strong> Select a card and generate a caption to preview.
+                  </div>
+                </div>
+              </div>
+              <div class="ig-size-badge">1080 × 1080 px · IG square</div>
+            </div>
+          </div>
+
+          <!-- Tools -->
+          <div class="ig-tools">
+            <div>
+              <div class="tool-label">Card for this post</div>
+              <select id="ig-card-sel" onchange="setIGCard(this.value)" style="width:100%;padding:9px 12px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:#fff;color:var(--ink);font-family:Inter,sans-serif">
+                <option value="">— pick a card —</option>
+              </select>
+            </div>
+
+            <div>
+              <div class="tool-label">Post style</div>
+              <div class="style-grid">
+                <div class="style-opt active" onclick="setStyle('clean',this)">
+                  <div class="style-prev" style="background:#f5f5f3;color:#888;border:1px solid #ddd">CLEAN</div>
+                  <span>Clean white</span>
+                </div>
+                <div class="style-opt" onclick="setStyle('dark',this)">
+                  <div class="style-prev" style="background:#111;color:#C9A84C">DARK</div>
+                  <span>Dark gold</span>
+                </div>
+                <div class="style-opt" onclick="setStyle('navy',this)">
+                  <div class="style-prev" style="background:#0c1f3a;color:#7ab0e0">NAVY</div>
+                  <span>Deep navy</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="tool-label">Your IG username</div>
+              <input type="text" id="ig-handle" placeholder="your_card_vault" style="width:100%" oninput="upUN(this.value)" />
+            </div>
+
+            <div>
+              <div class="tool-label">Caption</div>
+              <button class="gen-btn" onclick="genCap()"><i class="ti ti-wand"></i> Generate caption</button>
+              <textarea id="ig-caption" style="width:100%;margin-top:8px;min-height:90px" placeholder="Caption appears here after generating…"></textarea>
+            </div>
+
+            <div>
+              <div class="tool-label">Hashtags</div>
+              <div class="htag-box" id="ig-htags">
+                #sportscards #cardcollector #gradedcards #thehobby #hobbybox #PSA #baseballcards #cardvault #waxbreak #vintagecards
+              </div>
+            </div>
+
+            <button class="ig-export-btn" onclick="exportIG()">
+              <i class="ti ti-download"></i> Download 1080×1080 for Instagram
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── Bulk upload modal ── -->
+<div class="bulk-modal" id="bulk-modal">
+  <div class="bulk-inner">
+    <div class="bulk-title"><i class="ti ti-folder-up" style="color:var(--gold-dk)"></i> Bulk upload cards</div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:-8px;line-height:1.6">
+      Select all your scan files at once. Files must be named sequentially — <strong>img.0001</strong> (front), <strong>img.0002</strong> (back), <strong>img.0003</strong> (front), etc. Odd = front, even = back.
+    </p>
+
+    <!-- API test -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">API connection test</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="bulk-test-file" accept="image/*" style="font-size:12px;flex:1" />
+        <button onclick="runBulkAPITest()" style="padding:7px 14px;font-size:12px;background:var(--ink);color:var(--gold);border:none;border-radius:var(--radius);cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">Test AI read</button>
+      </div>
+      <div id="bulk-test-result" style="margin-top:8px;font-size:12px;font-family:monospace;background:#111;color:#0f0;padding:8px;border-radius:4px;display:none;white-space:pre-wrap;max-height:120px;overflow-y:auto"></div>
+    </div>
+
+    <div class="bulk-drop" id="bulk-drop" onclick="document.getElementById('bulk-file-input').click()">
+      <i class="ti ti-photo-up"></i>
+      <p>Click to select all your scan files</p>
+      <small>Hold Cmd (Mac) or Ctrl (Windows) to select multiple files · JPEG only</small>
+      <input type="file" id="bulk-file-input" accept="image/*" multiple style="display:none" onchange="bulkFilesSelected(this)" />
+    </div>
+
+    <div id="bulk-pairs" class="bulk-pairs" style="display:none"></div>
+
+    <div id="bulk-progress-wrap" style="display:none">
+      <div class="bulk-progress"><div class="bulk-progress-fill" id="bulk-progress-fill" style="width:0%"></div></div>
+      <div class="bulk-status-text" id="bulk-status-text">Starting…</div>
+    </div>
+
+    <div class="bulk-actions">
+      <button class="bulk-cancel" onclick="closeBulkUpload()">Close</button>
+      <button class="bulk-start" id="bulk-start-btn" onclick="startBulkProcess()" disabled>
+        <i class="ti ti-wand"></i> Crop, AI scan &amp; add to collection
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Lightbox ── -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.95);align-items:center;justify-content:center;flex-direction:column;gap:12px" onclick="closeLightbox()">
+  <div style="position:relative;max-width:95vw;max-height:88vh;overflow:auto;cursor:zoom-in" id="lb-inner" onclick="event.stopPropagation();toggleZoom()">
+    <img id="lb-img" src="" alt="" style="display:block;max-width:100%;max-height:88vh;transition:transform 0.2s;transform-origin:center center" />
+  </div>
+  <div style="color:#888;font-size:12px">Click image to zoom · Click outside to close</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── State ── */
+  let cards = [];
+  let frontURL = null, backURL = null;
+  let activeCard = null;
+  let igStyle = 'clean';
+  let galFilt = 'all';
+
+  /* ── Toast — defined early so all functions can use it ── */
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  /* ── Navigation ── */
+  const TITLES = { scan: 'Scan a card', gallery: 'Your collection', instagram: 'Share to Instagram' };
+  function sw(name) {
+    ['scan','gallery','instagram'].forEach(n => {
+      document.getElementById('panel-' + n).classList.toggle('active', n === name);
+      document.getElementById('nav-' + n).classList.toggle('active', n === name);
+    });
+    document.getElementById('topbar-title').textContent = TITLES[name];
+    if (name === 'gallery') { renderGal(); updateStats(); }
+    if (name === 'instagram') renderIGTab();
+  }
+
+  /* ── API Key ── */
+  let anthropicKey = localStorage.getItem('slabscan_apikey') || '';
+
+  function saveApiKey() {
+    const val = document.getElementById('api-key-input').value.trim();
+    if (!val.startsWith('sk-ant-')) { toast('Key should start with sk-ant-…'); return; }
+    anthropicKey = val;
+    localStorage.setItem('slabscan_apikey', val);
+    const btn = document.getElementById('api-key-save-btn');
+    btn.textContent = '✓ Saved';
+    btn.classList.add('saved');
+    document.getElementById('api-key-card').style.borderColor = '#86efac';
+    toast('API key saved — AI slab reading active');
+  }
+
+  /* ── AI slab reader ── called automatically on front scan upload ── */
+  async function readSlabWithAI(imageDataURL) {
+    if (!anthropicKey) {
+      toast('Add your API key above to enable AI autofill');
+      return;
+    }
+
+    document.getElementById('ai-reading').classList.add('visible');
+    document.getElementById('ai-filled').classList.remove('visible');
+    document.getElementById('ai-autofill-badge').style.display = 'none';
+    toast('Reading slab with AI…');
+
+    // Resize to 800px max — keeps label readable, well under API size limit
+    let base64;
+    try {
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = imageDataURL; });
+      const MAX = 800;
+      const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      base64 = cv.toDataURL('image/jpeg', 0.92).split(',')[1];
+    } catch(e) {
+      base64 = imageDataURL.split(',')[1];
+    }
+
+    const prompt = `This is a scan of a graded sports card in a PSA, SGC, or CGC slab. Read ALL text on the grading label carefully. Return ONLY a raw JSON object — no markdown, no backticks, no explanation, just the JSON itself:
+
+{"name":"player name as shown","year":"4-digit year","set":"set name","cardnum":"card number","grader":"PSA or SGC or CGC","grade":"grade as shown e.g. 10 or 9.5 or 1","sport":"Baseball or Basketball or Football or Hockey or Soccer or Other"}
+
+Use "" for any field you cannot clearly read.`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'text', text: prompt }
+          ]}]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || 'API error ' + response.status);
+      }
+
+      const data = await response.json();
+      const raw = (data.content?.[0]?.text || '').replace(/```json|```/g, '').trim();
+
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch(e) { throw new Error('AI response not valid JSON: ' + raw.slice(0, 100)); }
+
+      if (parsed.name)    document.getElementById('cn').value   = parsed.name;
+      if (parsed.year)    document.getElementById('cy').value   = parsed.year;
+      if (parsed.set)     document.getElementById('cs').value   = parsed.set;
+      if (parsed.cardnum) document.getElementById('cnum').value = parsed.cardnum;
+      if (parsed.grader && ['PSA','SGC','CGC'].includes(parsed.grader))
+        document.getElementById('cg').value = parsed.grader;
+      if (parsed.grade) {
+        const sel = document.getElementById('cgr');
+        const opt = Array.from(sel.options).find(o => o.value === String(parsed.grade));
+        if (opt) sel.value = opt.value;
+      }
+      if (parsed.sport) {
+        const sel = document.getElementById('csp');
+        const opt = Array.from(sel.options).find(o => o.value === parsed.sport);
+        if (opt) sel.value = opt.value;
+      }
+
+      document.getElementById('ai-reading').classList.remove('visible');
+      document.getElementById('ai-filled').classList.add('visible');
+      document.getElementById('ai-autofill-badge').style.display = 'inline-flex';
+      toast('AI filled in card details ✓');
+
+    } catch (err) {
+      document.getElementById('ai-reading').classList.remove('visible');
+      toast('AI read failed: ' + err.message);
+      console.error('Slab AI error:', err);
+    }
+  }
+
+  /* ── Slot loading ── */
+  function loadSlot(side, inp) {
+    const file = inp.files[0]; if (!file) return;
+    const slotId  = side === 'front' ? 'fw' : 'bw';
+    const checkId = side === 'front' ? 'fc' : 'bc';
+
+    document.getElementById(slotId).innerHTML = `<div class="slot-ph"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i><span>Cropping…</span></div>`;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = () => {
+        document.getElementById(slotId).innerHTML = `<div class="slot-ph" style="color:var(--danger)"><i class="ti ti-alert-circle"></i><span>Could not read — use JPEG.</span></div>`;
+      };
+      img.onload = () => {
+        // Downsample to 1600px max for processing
+        const MAX = 1600;
+        const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+        const W = Math.round(img.naturalWidth * scale);
+        const H = Math.round(img.naturalHeight * scale);
+
+        const cvs = document.createElement('canvas');
+        cvs.width = W; cvs.height = H;
+        cvs.getContext('2d').drawImage(img, 0, 0, W, H);
+
+        const result = cropAndDeskew(cvs, W, H, side);
+        let jpeg;
+        try { jpeg = result.toDataURL('image/jpeg', 0.93); }
+        catch(e) { toast('Export error: ' + e.message); return; }
+
+        if (side === 'front') frontURL = jpeg;
+        else backURL = jpeg;
+
+        document.getElementById(slotId).innerHTML = `<img src="${jpeg}" alt="${side}" style="width:100%;height:100%;object-fit:contain;background:#111" />`;
+        document.getElementById(checkId).style.display = 'inline-flex';
+        document.getElementById('proc-btn').disabled = !(frontURL && backURL);
+        if (side === 'front') readSlabWithAI(jpeg);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ── Auto-crop + deskew ── */
+  function cropAndDeskew(cvs, W, H, side) {
+    const ctx = cvs.getContext('2d');
+    let px;
+    try { px = ctx.getImageData(0, 0, W, H).data; }
+    catch(e) { return cvs; }
+
+    function br(x, y) {
+      const i = (y * W + x) * 4;
+      return px[i] * 0.299 + px[i+1] * 0.587 + px[i+2] * 0.114;
+    }
+
+    const THRESH     = 40;
+    const THRESH_BOT = 55;
+    const NEED_TOP   = Math.ceil(W * 0.04);
+    const NEED_BOT   = Math.ceil(W * 0.08);
+    const NEED_SIDE  = Math.ceil(H * 0.04);
+
+    function rowPass(y, need, thr) {
+      let n = 0;
+      for (let x = 0; x < W; x += 2) if (br(x, y) > thr && ++n >= need) return true;
+      return false;
+    }
+    function colPass(x, need, thr) {
+      let n = 0;
+      for (let y = 0; y < H; y += 2) if (br(x, y) > thr && ++n >= need) return true;
+      return false;
+    }
+
+    let top = -1, bot = -1, lft = -1, rgt = -1;
+    for (let y = 0;   y < H;  y++) { if (rowPass(y, NEED_TOP,  THRESH))     { top = y; break; } }
+    for (let y = H-1; y >= 0; y--) { if (rowPass(y, NEED_BOT,  THRESH_BOT)) { bot = y; break; } }
+    for (let x = 0;   x < W;  x++) { if (colPass(x, NEED_SIDE, THRESH))     { lft = x; break; } }
+    for (let x = W-1; x >= 0; x--) { if (colPass(x, NEED_SIDE, THRESH))     { rgt = x; break; } }
+
+    if (top < 0 || bot < 0 || lft < 0 || rgt < 0) return cvs;
+
+    // ── Detect skew from the top edge of the label ──
+    // Only sample the middle 70% of the width — the outer 15% each side
+    // has burned/dark slab corners that corrupt the angle reading.
+    const stripH  = Math.round((bot - top) * 0.08);
+    const margin  = Math.round((rgt - lft) * 0.15);
+    const xStart  = lft + margin;
+    const xEnd    = rgt - margin;
+    const pts = [];
+    const xStep = Math.max(1, Math.round((xEnd - xStart) / 40));
+
+    for (let x = xStart; x < xEnd; x += xStep) {
+      for (let y = top; y < top + stripH; y++) {
+        if (br(x, y) > THRESH) { pts.push({ x, y }); break; }
+      }
+    }
+
+    let skewDeg = 0;
+    if (pts.length >= 6) {
+      // Linear regression on (x, y) points → slope = rise/run → angle
+      let sx=0, sy=0, sxy=0, sx2=0, n=pts.length;
+      pts.forEach(p => { sx+=p.x; sy+=p.y; sxy+=p.x*p.y; sx2+=p.x*p.x; });
+      const denom = n*sx2 - sx*sx;
+      if (Math.abs(denom) > 0.001) {
+        const slope = (n*sxy - sx*sy) / denom;
+        skewDeg = Math.atan(slope) * 180 / Math.PI;
+      }
+    }
+
+    // Hard clamp to ±5° — reject anything larger as a misread
+    skewDeg = Math.max(-5, Math.min(5, skewDeg));
+
+    // ── Rotate to deskew (only if angle is meaningful) ──
+    let source = cvs;
+    let sW = W, sH = H;
+    let sTop = top, sBot = bot, sLft = lft, sRgt = rgt;
+
+    if (Math.abs(skewDeg) > 0.3) {
+      const rad = skewDeg * Math.PI / 180;
+      const sinA = Math.abs(Math.sin(rad)), cosA = Math.abs(Math.cos(rad));
+      const dW = Math.round(W * cosA + H * sinA);
+      const dH = Math.round(W * sinA + H * cosA);
+
+      const dCvs = document.createElement('canvas');
+      dCvs.width = dW; dCvs.height = dH;
+      const dctx = dCvs.getContext('2d');
+      dctx.fillStyle = '#000';
+      dctx.fillRect(0, 0, dW, dH);
+      dctx.translate(dW / 2, dH / 2);
+      dctx.rotate(-rad);
+      dctx.drawImage(cvs, -W/2, -H/2, W, H);
+      dctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      // Re-detect bounds on deskewed image
+      let dpx;
+      try { dpx = dctx.getImageData(0, 0, dW, dH).data; }
+      catch(e) { source = dCvs; sW = dW; sH = dH; }
+
+      if (dpx) {
+        function dbr(x, y) {
+          const i = (y*dW+x)*4;
+          return dpx[i]*0.299 + dpx[i+1]*0.587 + dpx[i+2]*0.114;
+        }
+        const dNT = Math.ceil(dW*0.04), dNB = Math.ceil(dW*0.08), dNS = Math.ceil(dH*0.04);
+        let dt=-1, db=-1, dl=-1, dr=-1;
+        for (let y=0;    y<dH;  y++) { let n=0; for(let x=0;x<dW;x+=2) if(dbr(x,y)>THRESH   && ++n>=dNT) { dt=y; break; } if(dt>=0) break; }
+        for (let y=dH-1; y>=0;  y--) { let n=0; for(let x=0;x<dW;x+=2) if(dbr(x,y)>THRESH_BOT && ++n>=dNB) { db=y; break; } if(db>=0) break; }
+        for (let x=0;    x<dW;  x++) { let n=0; for(let y=0;y<dH;y+=2) if(dbr(x,y)>THRESH   && ++n>=dNS) { dl=x; break; } if(dl>=0) break; }
+        for (let x=dW-1; x>=0;  x--) { let n=0; for(let y=0;y<dH;y+=2) if(dbr(x,y)>THRESH   && ++n>=dNS) { dr=x; break; } if(dr>=0) break; }
+
+        if (dt>=0 && db>=0 && dl>=0 && dr>=0) {
+          sTop=dt; sBot=db; sLft=dl; sRgt=dr;
+        }
+        source = dCvs; sW = dW; sH = dH;
+      }
+    }
+
+    const PAD = 6;
+    sTop = Math.max(0, sTop - PAD);
+    sBot = Math.min(sH - 1, sBot + PAD);
+    sLft = Math.max(0, sLft - PAD);
+    sRgt = Math.min(sW - 1, sRgt + PAD);
+
+    const cW = sRgt - sLft, cH = sBot - sTop;
+    if (cW < 60 || cH < 60) return cvs;
+
+    const cropped = document.createElement('canvas');
+    cropped.width = cW; cropped.height = cH;
+    cropped.getContext('2d').drawImage(source, sLft, sTop, cW, cH, 0, 0, cW, cH);
+
+    // Rotate 180° — V600 scans both sides upside down
+    const rot = document.createElement('canvas');
+    rot.width = cW; rot.height = cH;
+    const rctx = rot.getContext('2d');
+    rctx.translate(cW, cH);
+    rctx.rotate(Math.PI);
+    rctx.drawImage(cropped, 0, 0);
+    return rot;
+  }
+
+  /* ── Process card ── */
+  function processCard() {
+    const name    = document.getElementById('cn').value.trim()    || 'Unnamed Card';
+    const year    = document.getElementById('cy').value.trim();
+    const set     = document.getElementById('cs').value.trim();
+    const cardnum = document.getElementById('cnum').value.trim();
+    const grader  = document.getElementById('cg').value;
+    const grade   = document.getElementById('cgr').value;
+    const sport   = document.getElementById('csp').value;
+    const cost    = parseFloat(document.getElementById('ccost').value) || 0;
+    const val     = parseFloat(document.getElementById('cval').value)  || 0;
+    const notes   = document.getElementById('cnotes').value.trim();
+
+    const box = document.getElementById('proc-box');
+    box.classList.add('visible');
+    document.getElementById('proc-btn').disabled = true;
+
+    // Run the animated steps, then call buildCombined
+    const sids  = ['s1','s2','s3','s4','s5'];
+    const slabs = ['Detecting card edges','Auto-cropping front and back','Correcting perspective','Compositing 1080×1080 canvas','Saving to collection'];
+    const pcts  = [18, 38, 58, 82, 100];
+
+    let i = 0;
+    function doStep() {
+      // Mark previous step done
+      if (i > 0) {
+        const prev = document.getElementById(sids[i - 1]);
+        prev.classList.remove('act'); prev.classList.add('done');
+        prev.querySelector('i').className = 'ti ti-circle-check';
+      }
+      // All steps finished — run the actual build
+      if (i === sids.length) {
+        buildCombined(name, year, set, cardnum, grader, grade, sport, cost, val, notes);
+        return;
+      }
+      // Animate current step
+      const el = document.getElementById(sids[i]);
+      el.classList.add('act');
+      el.querySelector('i').className = 'ti ti-loader-2';
+      document.getElementById('ps').textContent = slabs[i] + '…';
+      document.getElementById('pb').style.width = pcts[i] + '%';
+      i++;
+      setTimeout(doStep, 500);
+    }
+    doStep();
+  }
+
+  function buildCombined(name, year, set, cardnum, grader, grade, sport, cost, val, notes) {
+    try {
+      // Skip canvas entirely — store both images and render combined view with HTML/CSS
+      // This avoids toDataURL memory/size issues with large V600 scans
+      const card = {
+        id: Date.now(), name, year, set, cardnum, grader, grade, sport,
+        cost, val, notes,
+        front: frontURL,
+        back:  backURL,
+        combined: null  // generated on-demand as HTML in gallery
+      };
+      cards.push(card);
+      activeCard = card;
+      updateNavBadge();
+      resetScanForm();
+      toast('Card added — saving to cloud…');
+      saveToStorage(card).then(() => {
+        renderGal();
+      });
+      setTimeout(() => sw('gallery'), 1000);
+    } catch(err) {
+      document.getElementById('ps').textContent = 'Error: ' + err.message;
+      document.getElementById('proc-btn').disabled = false;
+      console.error('buildCombined error:', err);
+    }
+  }
+
+  function resetScanForm() {
+    document.getElementById('proc-box').classList.remove('visible');
+    document.getElementById('proc-btn').disabled = false;
+    frontURL = null; backURL = null;
+    ['fw','bw'].forEach(id => {
+      const s = id === 'fw' ? 'front' : 'back';
+      document.getElementById(id).innerHTML = `<div class="slot-ph"><i class="ti ti-photo-up"></i><span>Click to upload ${s}</span></div>`;
+    });
+    document.getElementById('fc').style.display = 'none';
+    document.getElementById('bc').style.display = 'none';
+    document.getElementById('fi').value = '';
+    document.getElementById('bi').value = '';
+    ['cn','cy','cs','cnum','ccost','cval','cnotes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ai-reading').classList.remove('visible');
+    document.getElementById('ai-filled').classList.remove('visible');
+    document.getElementById('ai-autofill-badge').style.display = 'none';
+    ['s1','s2','s3','s4','s5'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('act','done');
+      el.querySelector('i').className = 'ti ti-circle-dashed';
+    });
+    document.getElementById('pb').style.background = '';
+  }
+
+  /* ── Stats ── */
+  function updateStats() {
+    const n  = cards.length;
+    const tc = cards.reduce((a,c) => a + (c.cost || 0), 0);
+    const tv = cards.reduce((a,c) => a + (c.val  || 0), 0);
+    const gl = tv - tc;
+    document.getElementById('st-count').textContent = n;
+    document.getElementById('st-cost').textContent  = '$' + tc.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    document.getElementById('st-val').textContent   = '$' + tv.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    const glEl = document.getElementById('st-gl');
+    glEl.textContent = (gl >= 0 ? '+$' : '−$') + Math.abs(gl).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    glEl.style.color = gl >= 0 ? 'var(--success)' : 'var(--danger)';
+    if (tc > 0) {
+      const pct = ((gl / tc) * 100).toFixed(1);
+      document.getElementById('st-gl-pct').textContent = (gl >= 0 ? '+' : '') + pct + '%';
+    }
+  }
+
+  function updateNavBadge() {
+    const b = document.getElementById('nav-badge');
+    b.style.display = cards.length ? 'inline-flex' : 'none';
+    b.textContent = cards.length;
+  }
+
+  /* ── Gallery ── */
+  function filt(f, el) {
+    galFilt = f;
+    document.querySelectorAll('.fpill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderGal();
+  }
+
+  function renderGal() {
+    closeDet();
+    let list = cards;
+    if (galFilt === 'PSA')        list = cards.filter(c => c.grader === 'PSA');
+    else if (galFilt === 'SGC')   list = cards.filter(c => c.grader === 'SGC');
+    else if (galFilt === 'CGC')   list = cards.filter(c => c.grader === 'CGC');
+    else if (galFilt === '10')    list = cards.filter(c => c.grade === '10');
+    else if (galFilt === '9+')    list = cards.filter(c => parseFloat(c.grade) >= 9);
+    else if (['Baseball','Basketball','Football','Hockey','Soccer'].includes(galFilt))
+      list = cards.filter(c => c.sport === galFilt);
+
+    document.getElementById('gcnt').textContent = list.length + ' card' + (list.length !== 1 ? 's' : '');
+    document.getElementById('eg').style.display = (list.length === 0) ? 'block' : 'none';
+
+    const valDelta = c => {
+      if (!c.cost && !c.val) return '';
+      const d = (c.val || 0) - (c.cost || 0);
+      return d === 0 ? '' : (d > 0 ? '+$' + d.toFixed(0) : '−$' + Math.abs(d).toFixed(0));
+    };
+    const deltaClass = c => (c.val - c.cost) >= 0 ? 'gain' : 'loss';
+
+    document.getElementById('gg').innerHTML = list.map(c => `
+      <div class="card-thumb" onclick="openDet(${c.id})">
+        <div class="ct-img" style="display:flex;gap:2px;background:#111">
+          <img src="${c.front}" alt="front" style="width:50%;height:100%;object-fit:cover" />
+          <img src="${c.back}"  alt="back"  style="width:50%;height:100%;object-fit:cover" />
+        </div>
+        <div class="ct-info">
+          <div class="ct-name">${c.name}</div>
+          <div class="ct-meta">
+            <span class="gbadge g${c.grader.toLowerCase()}">${c.grader} ${c.grade}</span>
+            ${valDelta(c) ? `<span class="gval-delta ${deltaClass(c)}">${valDelta(c)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /* ── Card detail ── */
+  function openDet(id) {
+    const c = cards.find(x => x.id === id); if (!c) return;
+    activeCard = c;
+    const det = document.getElementById('cd');
+    det.classList.add('open');
+
+    document.getElementById('di').innerHTML = `
+      <div style="display:flex;gap:8px;border-radius:10px;overflow:hidden;border:1px solid var(--border)">
+        <img src="${c.front}" alt="front" style="width:50%;display:block;object-fit:cover" />
+        <img src="${c.back}"  alt="back"  style="width:50%;display:block;object-fit:cover" />
+      </div>`;
+
+    // Populate editable fields
+    document.getElementById('det-name').value    = c.name    || '';
+    document.getElementById('det-year').value    = c.year    || '';
+    document.getElementById('det-set').value     = c.set     || '';
+    document.getElementById('det-cardnum').value = c.cardnum || '';
+    document.getElementById('det-grader').value  = c.grader  || 'PSA';
+    document.getElementById('det-grade').value   = c.grade   || '10';
+    document.getElementById('det-sport').value   = c.sport   || 'Baseball';
+    document.getElementById('det-notes').value   = c.notes   || '';
+    document.getElementById('det-cost').value    = c.cost    || '';
+    document.getElementById('det-val').value     = c.val     || '';
+    updateGain();
+
+    det.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function updateGain() {
+    const cost = parseFloat(document.getElementById('det-cost').value) || 0;
+    const val  = parseFloat(document.getElementById('det-val').value)  || 0;
+    const box  = document.getElementById('gl-box');
+    const num  = document.getElementById('gl-num');
+    if (!cost && !val) { num.textContent = '—'; box.className = 'val-result neutral-box'; return; }
+    const diff = val - cost;
+    if (diff >= 0) {
+      box.className = 'val-result gain-box';
+      num.textContent = '+$' + diff.toFixed(2);
+    } else {
+      box.className = 'val-result loss-box';
+      num.textContent = '−$' + Math.abs(diff).toFixed(2);
+    }
+  }
+
+  function saveDetEdits() {
+    if (!activeCard) return;
+    activeCard.name    = document.getElementById('det-name').value.trim()    || activeCard.name;
+    activeCard.year    = document.getElementById('det-year').value.trim();
+    activeCard.set     = document.getElementById('det-set').value.trim();
+    activeCard.cardnum = document.getElementById('det-cardnum').value.trim();
+    activeCard.grader  = document.getElementById('det-grader').value;
+    activeCard.grade   = document.getElementById('det-grade').value;
+    activeCard.sport   = document.getElementById('det-sport').value;
+    activeCard.notes   = document.getElementById('det-notes').value;
+    activeCard.cost    = parseFloat(document.getElementById('det-cost').value) || 0;
+    activeCard.val     = parseFloat(document.getElementById('det-val').value)  || 0;
+    updateStats();
+    renderGal();
+    updateCardInSupabase(activeCard)
+      .then(() => toast('Changes saved ✓'))
+      .catch(e => toast('Save failed: ' + e.message));
+  }
+
+  function closeDet() { document.getElementById('cd').classList.remove('open'); }
+
+  function makeCanvas(c, style, callback) {
+    const W = 1080, H = 1080;
+    const GAP = 8; // thin black divider
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    let loaded = 0;
+    const fi = new Image(), bi = new Image();
+
+    const draw = () => {
+      loaded++;
+      if (loaded < 2) return;
+
+      // Each card gets half the width minus half the gap
+      const slotW = Math.floor((W - GAP) / 2);
+
+      // Calculate natural aspect ratio from actual image dimensions
+      // Use the front image's ratio as reference (both slabs same shape)
+      const frontRatio = fi.naturalHeight / fi.naturalWidth;
+      const backRatio  = bi.naturalHeight / bi.naturalWidth;
+
+      // Scale each card to fit its slot width while preserving aspect ratio
+      const frontH = Math.round(slotW * frontRatio);
+      const backH  = Math.round(slotW * backRatio);
+
+      // Cap height to canvas height with a small margin
+      const MARGIN = 40;
+      const maxH = H - MARGIN * 2;
+      const fScale = frontH > maxH ? maxH / frontH : 1;
+      const bScale = backH  > maxH ? maxH / backH  : 1;
+
+      const fW = Math.round(slotW * fScale);
+      const fH = Math.round(frontH * fScale);
+      const bW = Math.round(slotW * bScale);
+      const bH = Math.round(backH  * bScale);
+
+      // Center each card vertically in the canvas
+      const fY = Math.round((H - fH) / 2);
+      const bY = Math.round((H - bH) / 2);
+
+      // Center each card horizontally within its slot
+      const fX = Math.round((slotW - fW) / 2);
+      const bX = slotW + GAP + Math.round((slotW - bW) / 2);
+
+      ctx.drawImage(fi, fX, fY, fW, fH);
+      ctx.drawImage(bi, bX, bY, bW, bH);
+
+      callback(canvas.toDataURL('image/jpeg', 0.93));
+    };
+
+    fi.onload = draw; bi.onload = draw;
+    fi.onerror = draw; bi.onerror = draw;
+    fi.src = c.front; bi.src = c.back;
+  }
+
+  function dlCard() {
+    if (!activeCard) return;
+    toast('Preparing download…');
+    makeCanvas(activeCard, igStyle, url => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${activeCard.name.replace(/\s+/g,'-')}_${activeCard.grader}${activeCard.grade}_1080x1080.jpg`;
+      a.click();
+      toast('Downloaded');
+    });
+  }
+
+  function copyCap() {
+    if (!activeCard) return;
+    navigator.clipboard.writeText(makeCap(activeCard)).then(() => toast('Caption copied'));
+  }
+
+  /* ── Caption builder ── */
+  function makeCap(c) {
+    if (!c) return '';
+    const valLine = c.val ? `Current value: $${c.val.toFixed(2)}.` : '';
+    return `🏆 ${c.name}${c.year ? ' (' + c.year + ')' : ''}${c.set ? ' — ' + c.set : ''}\n\nGraded ${c.grader} ${c.grade} — just added to the vault! ${valLine}\n\n${c.grader === 'PSA' ? 'PSA slabs hit different.' : 'SGC black label is elite.'}\n\n#sportscards #${c.sport.toLowerCase()}cards #${c.grader.toLowerCase()} #gradedcards #${c.name.replace(/\s+/g,'').toLowerCase()} #cardvault #thehobby #cardcollector #waxbreak`;
+  }
+
+  /* ── Instagram tab ── */
+  function renderIGTab() {
+    const empty = cards.length === 0;
+    document.getElementById('ig-no-card').style.display = empty ? 'block' : 'none';
+    document.getElementById('ig-main').style.display    = empty ? 'none'  : 'block';
+    if (empty) return;
+
+    const sel = document.getElementById('ig-card-sel');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— pick a card —</option>' +
+      cards.map(c => `<option value="${c.id}">${c.name} · ${c.grader} ${c.grade}</option>`).join('');
+    if (cur) { sel.value = cur; }
+    if (activeCard && !cur) { sel.value = activeCard.id; setIGCard(activeCard.id); }
+  }
+
+  function setIGCard(id) {
+    const c = cards.find(x => x.id == id);
+    if (!c) return;
+    activeCard = c;
+    document.getElementById('ig-img').innerHTML = `<img src="${c.front}" alt="${c.name}" style="width:100%;height:100%;object-fit:cover" />`;
+    updateHashtags(c);
+  }
+
+  function setStyle(style, el) {
+    igStyle = style;
+    document.querySelectorAll('.style-opt').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function upUN(v) {
+    document.getElementById('ig-un').textContent  = v || 'your_card_vault';
+    document.getElementById('ig-un2').textContent = v || 'your_card_vault';
+  }
+
+  function updateHashtags(c) {
+    const tags = ['#sportscards','#cardcollector','#gradedcards','#thehobby','#hobbybox',
+      '#' + c.grader.toLowerCase(), '#' + c.sport.toLowerCase() + 'cards',
+      '#' + c.name.replace(/\s+/g,'').toLowerCase(), '#cardvault','#waxbreak'].join(' ');
+    document.getElementById('ig-htags').textContent = tags;
+  }
+
+  /* ── Supabase config ── */
+  const SB_URL = 'https://nkcesysywgsuxsmyqvnn.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rY2VzeXN5d2dzdXhzbXlxdm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2OTEzNTUsImV4cCI6MjA5ODI2NzM1NX0.kxRNLGUqe31whjMmHFox8mgUJzA4uk4e8mQ_Blo3lnE';
+  const SB_H = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+
+  /* ── Upload image to Supabase Storage ── */
+  async function uploadImage(dataURL, filename) {
+    const base64 = dataURL.split(',')[1];
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'image/jpeg' });
+    const r = await fetch(`${SB_URL}/storage/v1/object/card-images/${filename}`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+      body: blob
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error('Image upload failed: ' + (e.message||r.status)); }
+    return `${SB_URL}/storage/v1/object/public/card-images/${filename}`;
+  }
+
+  /* ── Save new card to Supabase ── */
+  async function saveToStorage(card) {
+    try {
+      toast('Saving to cloud…');
+      // Upload images if they are data URLs
+      let frontUrl = card.front, backUrl = card.back;
+      if (card.front && card.front.startsWith('data:'))
+        frontUrl = await uploadImage(card.front, `${card.id}_front.jpg`);
+      if (card.back && card.back.startsWith('data:'))
+        backUrl = await uploadImage(card.back, `${card.id}_back.jpg`);
+
+      // Update local card with permanent URLs
+      card.front = frontUrl;
+      card.back  = backUrl;
+
+      const row = {
+        id: card.id, name: card.name||'', year: card.year||'',
+        set_name: card.set||'', cardnum: card.cardnum||'',
+        grader: card.grader||'PSA', grade: card.grade||'',
+        sport: card.sport||'Other', cost: card.cost||0, val: card.val||0,
+        notes: card.notes||'', front_url: frontUrl, back_url: backUrl
+      };
+      const r = await fetch(`${SB_URL}/rest/v1/cards`, {
+        method: 'POST',
+        headers: { ...SB_H, 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(row)
+      });
+      if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message||r.status); }
+      toast('Saved to cloud ✓');
+    } catch(e) {
+      toast('Cloud save failed: ' + e.message);
+      console.error('Supabase save error:', e);
+    }
+  }
+
+  /* ── Update existing card in Supabase ── */
+  async function updateCardInSupabase(card) {
+    const row = {
+      name: card.name||'', year: card.year||'', set_name: card.set||'',
+      cardnum: card.cardnum||'', grader: card.grader||'PSA', grade: card.grade||'',
+      sport: card.sport||'Other', cost: card.cost||0, val: card.val||0, notes: card.notes||''
+    };
+    const r = await fetch(`${SB_URL}/rest/v1/cards?id=eq.${card.id}`, {
+      method: 'PATCH', headers: SB_H, body: JSON.stringify(row)
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message||r.status); }
+  }
+
+  /* ── Delete card from Supabase ── */
+  async function deleteCardFromSupabase(id) {
+    const r = await fetch(`${SB_URL}/rest/v1/cards?id=eq.${id}`, {
+      method: 'DELETE', headers: SB_H
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message||r.status); }
+  }
+
+  /* ── Load all cards from Supabase on startup ── */
+  async function loadFromStorage() {
+    try {
+      const r = await fetch(`${SB_URL}/rest/v1/cards?order=created_at.asc&select=*`, { headers: SB_H });
+      if (!r.ok) throw new Error(r.status);
+      const rows = await r.json();
+      cards = rows.map(row => ({
+        id: row.id, name: row.name, year: row.year, set: row.set_name,
+        cardnum: row.cardnum, grader: row.grader, grade: row.grade,
+        sport: row.sport, cost: parseFloat(row.cost)||0, val: parseFloat(row.val)||0,
+        notes: row.notes, front: row.front_url, back: row.back_url
+      }));
+      updateNavBadge();
+      updateStats();
+    } catch(e) {
+      toast('Could not load collection: ' + e.message);
+      console.error('Supabase load error:', e);
+    }
+  }
+
+  // Load on startup
+  window.addEventListener('DOMContentLoaded', () => {
+    loadFromStorage();
+    if (anthropicKey) {
+      const inp = document.getElementById('api-key-input');
+      if (inp) inp.value = anthropicKey;
+      const btn = document.getElementById('api-key-save-btn');
+      if (btn) { btn.textContent = '✓ Saved'; btn.classList.add('saved'); }
+      const c = document.getElementById('api-key-card');
+      if (c) c.style.borderColor = '#86efac';
+    }
+  });
+
+  /* ── Delete card ── */
+  function deleteCard() {
+    if (!activeCard) return;
+    if (!confirm(`Delete "${activeCard.name}" from your collection? This cannot be undone.`)) return;
+    const id = activeCard.id;
+    cards = cards.filter(c => c.id !== id);
+    activeCard = null;
+    deleteCardFromSupabase(id).catch(e => toast('Delete failed: ' + e.message));
+    updateNavBadge();
+    updateStats();
+    closeDet();
+    renderGal();
+    toast('Card deleted');
+  }
+
+  /* ── Lightbox ── */
+  let lbZoomed = false;
+  function openLightbox(src) {
+    lbZoomed = false;
+    document.getElementById('lb-img').src = src;
+    document.getElementById('lb-img').style.transform = 'scale(1)';
+    document.getElementById('lightbox').style.display = 'flex';
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    lbZoomed = false;
+  }
+  function toggleZoom() {
+    const img = document.getElementById('lb-img');
+    lbZoomed = !lbZoomed;
+    img.style.transform = lbZoomed ? 'scale(2.2)' : 'scale(1)';
+    img.style.cursor = lbZoomed ? 'zoom-out' : 'zoom-in';
+    document.getElementById('lb-inner').style.overflow = lbZoomed ? 'scroll' : 'auto';
+  }
+
+  function genCap() {
+    if (!activeCard) { toast('Pick a card first'); return; }
+    if (!anthropicKey) { toast('Add your API key to generate AI captions'); return; }
+
+    const btn = document.querySelector('.gen-btn');
+    if (btn) { btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Writing…'; btn.disabled = true; }
+    document.getElementById('ig-caption').value = 'Writing caption…';
+
+    const c = activeCard;
+    const prompt = `You are a sports card collector writing an Instagram caption about a player on a graded card.
+
+Card details:
+- Player: ${c.name}
+- Year: ${c.year || 'unknown'}
+- Set: ${c.set || 'unknown'}
+- Sport: ${c.sport}
+- Graded: ${c.grader} ${c.grade}
+
+Write a 100-150 word caption focused entirely on the player — who they were, what made them great, their key achievements, stats, and legacy in ${c.sport}. Write in flowing paragraphs, no bullet points, no hashtags, no emojis. Make it read like a knowledgeable collector talking about a player they admire.`;
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      const cap = data.content?.[0]?.text || '';
+      document.getElementById('ig-caption').value = cap;
+      const handle = document.getElementById('ig-handle').value || 'your_card_vault';
+      document.getElementById('ig-cap').innerHTML = `<strong>${handle}</strong> ${cap.slice(0,100)}…`;
+      toast('Caption written');
+    })
+    .catch(e => { toast('Caption failed: ' + e.message); })
+    .finally(() => {
+      if (btn) { btn.innerHTML = '<i class="ti ti-wand"></i> Generate AI caption ↗'; btn.disabled = false; }
+    });
+  }
+
+  function exportIG() {
+    if (!activeCard) { toast('Pick a card first'); return; }
+    toast('Preparing 1080×1080…');
+    makeCanvas(activeCard, igStyle, url => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `IG_${activeCard.name.replace(/\s+/g,'-')}_${activeCard.grader}${activeCard.grade}_1080x1080.jpg`;
+      a.click();
+      toast('1080×1080 downloaded — ready for Instagram');
+    });
+  }
+
+  /* ── CSV export ── */
+  function exportCSV() {
+    if (!cards.length) { toast('No cards to export'); return; }
+    const hdr = ['Name','Year','Set','Card #','Grader','Grade','Sport','Cost ($)','Value ($)','Gain/Loss ($)','Notes'];
+    const rows = cards.map(c => {
+      const gl = (c.val || 0) - (c.cost || 0);
+      return [
+        c.name, c.year, c.set, c.cardnum, c.grader, c.grade, c.sport,
+        (c.cost || 0).toFixed(2), (c.val || 0).toFixed(2), gl.toFixed(2),
+        (c.notes || '').replace(/"/g, '""')
+      ].map(v => `"${v}"`).join(',');
+    });
+    const csv  = [hdr.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'card-vault-collection.csv'; a.click();
+    URL.revokeObjectURL(url);
+    toast('CSV exported — ' + cards.length + ' cards');
+  }
+
+  /* ── Bulk upload ── */
+  let bulkPairs = []; // [{frontFile, backFile, frontURL, backURL, status}]
+  let bulkRunning = false;
+
+  function openBulkUpload() {
+    bulkPairs = [];
+    document.getElementById('bulk-pairs').style.display = 'none';
+    document.getElementById('bulk-pairs').innerHTML = '';
+    document.getElementById('bulk-progress-wrap').style.display = 'none';
+    document.getElementById('bulk-start-btn').disabled = true;
+    document.getElementById('bulk-file-input').value = '';
+    document.getElementById('bulk-modal').classList.add('open');
+  }
+
+  function closeBulkUpload() {
+    if (bulkRunning) return; // don't close while processing
+    document.getElementById('bulk-modal').classList.remove('open');
+  }
+
+  function bulkFilesSelected(inp) {
+    const files = Array.from(inp.files);
+    if (!files.length) return;
+
+    // Sort files by name so numbering is sequential
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+    // Pair them: file[0]+file[1], file[2]+file[3], etc.
+    bulkPairs = [];
+    for (let i = 0; i < files.length - 1; i += 2) {
+      bulkPairs.push({
+        frontFile: files[i],
+        backFile:  files[i + 1],
+        frontURL:  null,
+        backURL:   null,
+        status:    'pending', // pending | reading | done | error
+        name:      files[i].name + ' + ' + files[i+1].name
+      });
+    }
+    // If odd number of files, last one has no pair
+    if (files.length % 2 !== 0) {
+      toast(`Odd number of files (${files.length}) — last file ignored`);
+    }
+
+    renderBulkPairs();
+    document.getElementById('bulk-start-btn').disabled = bulkPairs.length === 0;
+  }
+
+  function renderBulkPairs() {
+    const wrap = document.getElementById('bulk-pairs');
+    wrap.style.display = bulkPairs.length ? 'flex' : 'none';
+    wrap.innerHTML = bulkPairs.map((p, i) => `
+      <div class="bulk-pair" id="bulk-pair-${i}">
+        <div>
+          <div class="bulk-pair-label">Front</div>
+          <div class="bulk-pair-name">${p.frontFile.name}</div>
+        </div>
+        <div>
+          <div class="bulk-pair-label">Back</div>
+          <div class="bulk-pair-name">${p.backFile.name}</div>
+        </div>
+        <span class="bulk-pair-status pending" id="bulk-status-${i}">Pending</span>
+      </div>
+    `).join('');
+  }
+
+  function setBulkStatus(i, status, label) {
+    bulkPairs[i].status = status;
+    const el = document.getElementById(`bulk-status-${i}`);
+    if (el) { el.className = `bulk-pair-status ${status}`; el.textContent = label; }
+  }
+
+  async function startBulkProcess() {
+    if (!bulkPairs.length) return;
+    bulkRunning = true;
+    document.getElementById('bulk-start-btn').disabled = true;
+    document.getElementById('bulk-progress-wrap').style.display = 'block';
+
+    if (!anthropicKey) {
+      toast('No API key — cards will be added without AI autofill');
+    }
+
+    let done = 0;
+    for (let i = 0; i < bulkPairs.length; i++) {
+      const pair = bulkPairs[i];
+      const total = bulkPairs.length;
+
+      try {
+        // ── Step 1: Load original files as data URLs (full res for AI)
+        setBulkStatus(i, 'reading', 'Loading…');
+        document.getElementById('bulk-status-text').textContent = `Card ${i+1} of ${total} — loading images`;
+        document.getElementById('bulk-progress-fill').style.width = Math.round((i / total) * 100) + '%';
+
+        const [frontOrigURL, backOrigURL] = await Promise.all([
+          readFileAsDataURL(pair.frontFile),
+          readFileAsDataURL(pair.backFile)
+        ]);
+
+        // ── Step 2: Crop and rotate both
+        setBulkStatus(i, 'reading', 'Cropping…');
+        document.getElementById('bulk-status-text').textContent = `Card ${i+1} of ${total} — cropping`;
+
+        const [frontURL, backURL] = await Promise.all([
+          cropFileFromDataURL(frontOrigURL, 'front'),
+          cropFileFromDataURL(backOrigURL, 'back')
+        ]);
+
+        pair.frontURL = frontURL;
+        pair.backURL  = backURL;
+
+        // ── Step 3: AI read using the ORIGINAL front image (full res label text)
+        let aiData = {};
+        if (anthropicKey) {
+          setBulkStatus(i, 'reading', 'AI reading…');
+          document.getElementById('bulk-status-text').textContent = `Card ${i+1} of ${total} — reading slab label`;
+          try {
+            aiData = await readSlabAI(frontOrigURL);
+          } catch(e) {
+            const errMsg = e.message.slice(0, 25);
+            console.warn(`AI read failed for card ${i+1}:`, e.message);
+            setBulkStatus(i, 'reading', 'AI: ' + errMsg);
+            // Continue without AI data
+          }
+        }
+
+        // ── Step 4: Save card
+        const card = {
+          id:      Date.now() + i,
+          name:    aiData.name    || pair.frontFile.name.replace(/\.[^.]+$/, ''),
+          year:    aiData.year    || '',
+          set:     aiData.set     || '',
+          cardnum: aiData.cardnum || '',
+          grader:  ['PSA','SGC','CGC'].includes(aiData.grader) ? aiData.grader : 'PSA',
+          grade:   aiData.grade   || '',
+          sport:   aiData.sport   || 'Other',
+          cost: 0, val: 0, notes: '',
+          front: frontURL,
+          back:  backURL
+        };
+
+        cards.push(card);
+        setBulkStatus(i, 'reading', 'Saving to cloud…');
+        document.getElementById('bulk-status-text').textContent = `Card ${i+1} of ${total} — saving to cloud`;
+        await saveToStorage(card);
+        updateNavBadge();
+        setBulkStatus(i, 'done', aiData.name ? '✓ ' + aiData.name.slice(0,20) : '✓ Added');
+        done++;
+
+      } catch(e) {
+        setBulkStatus(i, 'error', 'Error: ' + e.message.slice(0, 30));
+        console.error('Bulk error on pair', i, e);
+      }
+
+      // Pause between cards so API rate limits aren't hit
+      await new Promise(r => setTimeout(r, 800));
+    }
+
+    document.getElementById('bulk-progress-fill').style.width = '100%';
+    document.getElementById('bulk-status-text').textContent =
+      `Complete — ${done} of ${bulkPairs.length} cards added`;
+    document.getElementById('bulk-start-btn').disabled = false;
+    document.getElementById('bulk-start-btn').innerHTML =
+      '<i class="ti ti-check"></i> Done — view collection';
+    document.getElementById('bulk-start-btn').onclick = () => { closeBulkUpload(); sw('gallery'); };
+    bulkRunning = false;
+    updateStats();
+    toast(`${done} cards added to collection`);
+  }
+
+  // Read a File object → data URL
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onerror = () => reject(new Error('FileReader failed for ' + file.name));
+      r.onload  = e => resolve(e.target.result);
+      r.readAsDataURL(file);
+    });
+  }
+
+  // Load a data URL → crop → return JPEG data URL
+  function cropFileFromDataURL(dataURL, side) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Image decode failed'));
+      img.onload = () => {
+        const MAX = 1600;
+        const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+        const W = Math.round(img.naturalWidth * scale);
+        const H = Math.round(img.naturalHeight * scale);
+        const cvs = document.createElement('canvas');
+        cvs.width = W; cvs.height = H;
+        cvs.getContext('2d').drawImage(img, 0, 0, W, H);
+        const result = cropAndDeskew(cvs, W, H, side);
+        try { resolve(result.toDataURL('image/jpeg', 0.93)); }
+        catch(e) { reject(e); }
+      };
+      img.src = dataURL;
+    });
+  }
+
+  async function runBulkAPITest() {
+    const out = document.getElementById('bulk-test-result');
+    const file = document.getElementById('bulk-test-file').files[0];
+    out.style.display = 'block';
+
+    if (!anthropicKey) {
+      out.style.color = '#f55';
+      out.textContent = 'ERROR: No API key saved.\nGo to the Scan tab and save your key first.';
+      return;
+    }
+    out.style.color = '#ff0';
+    out.textContent = `API key: ${anthropicKey.slice(0,12)}...\n`;
+
+    if (!file) {
+      out.textContent += 'No file selected — testing API connection with text only...';
+      try {
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 20,
+            messages: [{ role: 'user', content: 'Reply with just: OK' }]
+          })
+        });
+        const d = await r.json();
+        out.style.color = r.ok ? '#0f0' : '#f55';
+        out.textContent += `\nHTTP ${r.status}\n${JSON.stringify(d, null, 2)}`;
+      } catch(e) {
+        out.style.color = '#f55';
+        out.textContent += '\nFetch error: ' + e.message;
+      }
+      return;
+    }
+
+    // With image
+    out.textContent += `File: ${file.name} (${(file.size/1024).toFixed(0)}KB)\n`;
+    out.textContent += 'Reading file...';
+
+    try {
+      const dataURL = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = () => rej(new Error('FileReader failed'));
+        r.readAsDataURL(file);
+      });
+      out.textContent += ' OK\nDecoding image...';
+
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataURL; });
+      out.textContent += ` OK (${img.naturalWidth}x${img.naturalHeight})\nResizing to 800px...`;
+
+      const MAX = 800;
+      const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = cv.toDataURL('image/jpeg', 0.92).split(',')[1];
+      out.textContent += ` OK (${w}x${h}, ${(base64.length/1024).toFixed(0)}KB b64)\nCalling API...`;
+
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'text', text: 'Read the grading label on this card slab and return JSON: {"name":"","year":"","set":"","cardnum":"","grader":"","grade":"","sport":""}' }
+          ]}]
+        })
+      });
+
+      const d = await r.json();
+      out.style.color = r.ok ? '#0f0' : '#f55';
+      out.textContent += `\nHTTP ${r.status}\nResponse: ${JSON.stringify(d?.content?.[0]?.text || d, null, 2)}`;
+    } catch(e) {
+      out.style.color = '#f55';
+      out.textContent += '\nERROR: ' + e.message;
+    }
+  }
+  async function readSlabAI(imageDataURL) {
+    // Downsample to 800px max — label text is readable at this size
+    // and keeps base64 well under Anthropic's 5MB image limit
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = imageDataURL; });
+
+    const MAX = 800;
+    const scale = Math.min(1, MAX / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+    const w = Math.max(1, Math.round(img.naturalWidth * scale));
+    const h = Math.max(1, Math.round(img.naturalHeight * scale));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(img, 0, 0, w, h);
+    const base64 = cv.toDataURL('image/jpeg', 0.92).split(',')[1];
+
+    if (!base64 || base64.length < 100) throw new Error('Image encoding failed');
+
+    const prompt = `This is a graded sports card slab (PSA, SGC, or CGC). Read ALL text on the grading label and return ONLY this raw JSON with no markdown, no backticks, no explanation:
+{"name":"player name","year":"4-digit year","set":"set name","cardnum":"card number","grader":"PSA or SGC or CGC","grade":"numeric grade","sport":"Baseball or Basketball or Football or Hockey or Soccer or Other"}
+Use "" for any field you cannot read.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+          { type: 'text', text: prompt }
+        ]}]
+      })
+    });
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(`API ${response.status}: ${errBody.error?.message || 'unknown error'}`);
+    }
+
+    const data = await response.json();
+    const raw = (data.content?.[0]?.text || '').replace(/```json|```/g, '').trim();
+    if (!raw) throw new Error('Empty response from API');
+
+    try {
+      return JSON.parse(raw);
+    } catch(e) {
+      throw new Error('JSON parse failed: ' + raw.slice(0, 60));
+    }
+  }
+</script>
+</body>
+</html>
