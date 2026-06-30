@@ -525,6 +525,20 @@
   .bulk-start  { padding: 9px 20px; font-size: 13px; font-weight: 600; border: none; border-radius: var(--radius); background: var(--ink); color: var(--gold); cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 6px; }
   .bulk-start:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* ── Startup loading overlay ── */
+  .startup-loader {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--surface); display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.3s;
+  }
+  .startup-loader.hidden { opacity: 0; pointer-events: none; }
+  .startup-loader-inner { text-align: center; width: 260px; }
+  .startup-loader-logo { width: 48px; height: 48px; background: var(--ink); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+  .startup-loader-logo span { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--gold); }
+  .startup-loader-text { font-size: 13px; color: var(--ink3); margin-bottom: 12px; }
+  .startup-loader-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .startup-loader-fill { height: 100%; width: 0%; background: var(--gold); border-radius: 3px; transition: width 0.3s ease; }
+
   /* ── Toast ── */
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(12px);
@@ -554,6 +568,15 @@
 </style>
 </head>
 <body>
+
+<div class="startup-loader" id="startup-loader">
+  <div class="startup-loader-inner">
+    <div class="startup-loader-logo"><span>SS</span></div>
+    <div class="startup-loader-text" id="startup-loader-text">Loading your collection…</div>
+    <div class="startup-loader-track"><div class="startup-loader-fill" id="startup-loader-fill" style="width:0%"></div></div>
+  </div>
+</div>
+
 
 <div class="layout">
   <!-- Sidebar -->
@@ -1787,6 +1810,22 @@ Use "" for any field you cannot clearly read.`;
     let keepGoing = true;
     let totalLoaded = 0;
 
+    const loaderText = document.getElementById('startup-loader-text');
+    const loaderFill = document.getElementById('startup-loader-fill');
+    const loaderBox  = document.getElementById('startup-loader');
+
+    // Get total row count first so we can show real progress
+    let totalCount = null;
+    try {
+      const countR = await fetch(`${SB_URL}/rest/v1/cards?select=id`, {
+        headers: { ...SB_H, 'Prefer': 'count=exact', 'Range': '0-0' }
+      });
+      const range = countR.headers.get('content-range'); // e.g. "0-0/69"
+      if (range && range.includes('/')) {
+        totalCount = parseInt(range.split('/')[1]);
+      }
+    } catch(e) { /* fall back to indeterminate progress */ }
+
     try {
       while (keepGoing) {
         const r = await fetch(
@@ -1820,6 +1859,17 @@ Use "" for any field you cannot clearly read.`;
         updateNavBadge();
         updateStats();
 
+        // Update loading bar
+        if (loaderText && loaderFill) {
+          if (totalCount) {
+            const pct = Math.min(100, Math.round((totalLoaded / totalCount) * 100));
+            loaderFill.style.width = pct + '%';
+            loaderText.textContent = `Loading ${totalLoaded} of ${totalCount} cards…`;
+          } else {
+            loaderText.textContent = `Loading ${totalLoaded} cards…`;
+          }
+        }
+
         // Show progress if we're on the gallery tab
         const galPanel = document.getElementById('panel-gallery');
         if (galPanel && galPanel.classList.contains('active')) {
@@ -1833,10 +1883,19 @@ Use "" for any field you cannot clearly read.`;
         }
       }
 
+      if (loaderFill) loaderFill.style.width = '100%';
       if (totalLoaded > 0) toast(`Loaded ${totalLoaded} cards`);
     } catch(e) {
       toast('Could not load full collection: ' + e.message);
       console.error('Supabase load error:', e);
+    } finally {
+      // Fade out and remove the startup loader
+      if (loaderBox) {
+        setTimeout(() => {
+          loaderBox.classList.add('hidden');
+          setTimeout(() => loaderBox.remove(), 350);
+        }, 200);
+      }
     }
   }
 
