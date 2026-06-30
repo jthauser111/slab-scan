@@ -1723,43 +1723,26 @@ Use "" for any field you cannot clearly read.`;
   const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rY2VzeXN5d2dzdXhzbXlxdm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2OTEzNTUsImV4cCI6MjA5ODI2NzM1NX0.kxRNLGUqe31whjMmHFox8mgUJzA4uk4e8mQ_Blo3lnE';
   const SB_H = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
 
-  /* ── Upload image to Supabase Storage ── */
-  async function uploadImage(dataURL, filename) {
-    const base64 = dataURL.split(',')[1];
-    const bin = atob(base64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const blob = new Blob([bytes], { type: 'image/jpeg' });
-    const r = await fetch(`${SB_URL}/storage/v1/object/card-images/${filename}`, {
-      method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
-      body: blob
-    });
-    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error('Image upload failed: ' + (e.message||r.status)); }
-    return `${SB_URL}/storage/v1/object/public/card-images/${filename}`;
-  }
-
-  /* ── Save new card to Supabase ── */
+  /* ── Save new card to Supabase (images stored as base64 in DB) ── */
   async function saveToStorage(card) {
     try {
       toast('Saving to cloud…');
-      // Upload images if they are data URLs
-      let frontUrl = card.front, backUrl = card.back;
-      if (card.front && card.front.startsWith('data:'))
-        frontUrl = await uploadImage(card.front, `${card.id}_front.jpg`);
-      if (card.back && card.back.startsWith('data:'))
-        backUrl = await uploadImage(card.back, `${card.id}_back.jpg`);
-
-      // Update local card with permanent URLs
-      card.front = frontUrl;
-      card.back  = backUrl;
-
       const row = {
-        id: card.id, name: card.name||'', year: card.year||'',
-        set_name: card.set||'', cardnum: card.cardnum||'',
-        grader: card.grader||'PSA', grade: card.grade||'',
-        sport: card.sport||'Other', cost: card.cost||0, val: card.val||0,
-        notes: card.notes||'', front_url: frontUrl, back_url: backUrl
+        id:        card.id,
+        name:      card.name      || '',
+        year:      card.year      || '',
+        set_name:  card.set       || '',
+        cardnum:   card.cardnum   || '',
+        grader:    card.grader    || 'PSA',
+        grade:     card.grade     || '',
+        sport:     card.sport     || 'Other',
+        cost:      card.cost      || 0,
+        val:       card.val       || 0,
+        notes:     card.notes     || '',
+        front_url: card.front     || '',
+        back_url:  card.back      || '',
+        front_data: card.front    || '',
+        back_data:  card.back     || ''
       };
       const r = await fetch(`${SB_URL}/rest/v1/cards`, {
         method: 'POST',
@@ -1802,10 +1785,19 @@ Use "" for any field you cannot clearly read.`;
       if (!r.ok) throw new Error(r.status);
       const rows = await r.json();
       cards = rows.map(row => ({
-        id: row.id, name: row.name, year: row.year, set: row.set_name,
-        cardnum: row.cardnum, grader: row.grader, grade: row.grade,
-        sport: row.sport, cost: parseFloat(row.cost)||0, val: parseFloat(row.val)||0,
-        notes: row.notes, front: row.front_url, back: row.back_url
+        id:      row.id,
+        name:    row.name,
+        year:    row.year,
+        set:     row.set_name,
+        cardnum: row.cardnum,
+        grader:  row.grader,
+        grade:   row.grade,
+        sport:   row.sport,
+        cost:    parseFloat(row.cost) || 0,
+        val:     parseFloat(row.val)  || 0,
+        notes:   row.notes,
+        front:   row.front_data || row.front_url || '',
+        back:    row.back_data  || row.back_url  || ''
       }));
       updateNavBadge();
       updateStats();
